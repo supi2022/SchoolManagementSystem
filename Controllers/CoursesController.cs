@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SchoolManagementSystem;
 using SchoolManagementSystem.Models;
+using SchoolManagementSystem.Repository;
 
 namespace SchoolManagementSystem.Controllers
 {
@@ -14,98 +15,126 @@ namespace SchoolManagementSystem.Controllers
     [ApiController]
     public class CoursesController : ControllerBase
     {
-        private readonly SchoolManagementSystemDBContext _context;
-        readonly log4net.ILog _log4net;
-        public CoursesController(SchoolManagementSystemDBContext context)
+        public readonly log4net.ILog _log4net;
+
+        ICourseRepository db;
+
+        public CoursesController(ICourseRepository _db)
         {
-            _context = context;
+            db = _db;
             _log4net = log4net.LogManager.GetLogger(typeof(CoursesController));
         }
 
+
+
         // GET: api/Courses
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Courses>>> GetCourses()
+        public IActionResult Get()
         {
-            return await _context.Courses.ToListAsync();
+            _log4net.Info("CoursesController GET ALL Action Method called");
+            try
+            {
+                var obj = db.GetDetails();
+                if (obj == null)
+                    return NotFound();
+                return Ok(obj);
+            }
+            catch (Exception)
+            {
+                return BadRequest();
+            }
         }
 
         // GET: api/Courses/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Courses>> GetCourses(int id)
+        public IActionResult Get1(string cd)
         {
-            var courses = await _context.Courses.FindAsync(id);
-
-            if (courses == null)
-            {
-                return NotFound();
-            }
-
-            return courses;
-        }
-
-        // PUT: api/Courses/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutCourses(int id, Courses courses)
-        {
-            if (id != courses.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(courses).State = EntityState.Modified;
-
+            Course data = new Course();
             try
             {
-                await _context.SaveChangesAsync();
+                data = db.GetDetail(cd);
+                if (data == null)
+                {
+                    return BadRequest(data);
+                }
+                return Ok(data);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception)
             {
-                if (!CoursesExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return BadRequest(data);
             }
-
-            return NoContent();
         }
 
         // POST: api/Courses
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<Courses>> PostCourses(Courses courses)
+        public IActionResult Post([FromBody] Course obj)
         {
-            _context.Courses.Add(courses);
-            await _context.SaveChangesAsync();
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var res = db.AddDetail(obj);
+                    if (res != null)
+                        return Ok(res);
 
-            return CreatedAtAction("GetCourses", new { id = courses.Id }, courses);
+                    return NotFound();
+                }
+                catch (Exception)
+                {
+                    return BadRequest();
+                }
+            }
+            return BadRequest();
         }
 
-        // DELETE: api/Courses/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<Courses>> DeleteCourses(int id)
+        // PUT: api/Courses/5
+        [HttpPut("{id}")]
+        public IActionResult Put(string cd, [FromBody] Course std)
         {
-            var courses = await _context.Courses.FindAsync(id);
-            if (courses == null)
+            if (ModelState.IsValid)
             {
-                return NotFound();
+                try
+                {
+                    var result = db.UpdateDetail(cd, std);
+                    if (result != 1)
+                        return NotFound();
+
+                    return Ok(result);
+                }
+                catch (Exception ex)
+                {
+                    if (ex.GetType().FullName ==
+                             "Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException")
+                    {
+                        return NotFound();
+                    }
+
+                    return BadRequest();
+                }
             }
 
-            _context.Courses.Remove(courses);
-            await _context.SaveChangesAsync();
-
-            return courses;
+            return BadRequest();
         }
 
-        private bool CoursesExists(int id)
+        // DELETE: api/ApiWithActions/5
+        [HttpDelete("{id}")]
+        public IActionResult Delete(string cd)
         {
-            return _context.Courses.Any(e => e.Id == id);
+            try
+            {
+                var result = db.Delete(cd);
+                if (result == 0)
+                {
+                    return NotFound(result);
+                }
+                return Ok(result);
+            }
+            catch (Exception)
+            {
+
+                return BadRequest(cd);
+            }
         }
+
     }
 }

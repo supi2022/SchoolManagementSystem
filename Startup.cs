@@ -11,10 +11,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SchoolManagementSystem.Interfaces;
 using SchoolManagementSystem.Repository;
 using Microsoft.OpenApi.Models;
-
+using SchoolManagementSystem.Models;
 
 namespace SchoolManagementSystem
 {
@@ -31,9 +30,11 @@ namespace SchoolManagementSystem
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers(); 
-            services.AddTransient<IStudentRepository, StudentRepository>();
+            //services.AddTransient<IStudentRepository, StudentRepository>();
             services.AddDbContext<SchoolManagementSystemDBContext>(options =>
-       options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+            services.AddScoped<IStudentRepository, StudentRepository>();
+            services.AddScoped<ICourseRepository, CourseRepository>();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "students API", Version = "v1" });

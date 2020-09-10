@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Update.Internal;
 using SchoolManagementSystem.Enum;
-using SchoolManagementSystem.Interfaces;
 using SchoolManagementSystem.Models;
 using System;
 using System.Collections.Generic;
@@ -16,7 +15,11 @@ namespace SchoolManagementSystem.Repository
         {
             db = _db;
         }
-        public virtual Student GetStudentDetails(string enrollId)
+        public List<Student> GetDetails()
+        {
+            return db.Student.ToList();
+        }
+        public  Student GetDetail(string enrollId)
         {
             if (db != null)
             {
@@ -25,26 +28,63 @@ namespace SchoolManagementSystem.Repository
             return null;
 
         }
-        public int UpdateDetail(string enrollId, string Studentname)//newly added
+       
+
+        public string AddDetail(Student std)//newlyadded
+        {
+            db.Student.Add(std);
+            db.SaveChanges();
+
+            return std.EnrollmentNo;
+        }
+
+
+
+        public int UpdateDetail(string enrollId, Student std)
         {
             if (db != null)
             {
-                Student val = db.Student.Where(x => x.EnrollmentNo == enrollId).FirstOrDefault();
-                Student valc = db.Student.Where(x => x.EnrollmentNo == enrollId).FirstOrDefault();
-                if (val != null)
+                var obj = (db.Student.Where(x => x.EnrollmentNo == enrollId)).FirstOrDefault();
+                if (obj != null)
                 {
-                    db.Student.Remove(val);
+                    obj.Studentname = std.Studentname;
+                    obj.Age = std.Age;
+                    obj.Birthdate = std.Birthdate;
+                    obj.EnrollmentNo= std.EnrollmentNo;
                     db.SaveChanges();
-                    if ((Studentname != "") && (Studentname!= null))
-                        valc.Studentname = Studentname;
-                    
-                    db.Student.Add(valc);
-                    db.SaveChanges();
+                    return 1;
                 }
+                return 0;
             }
             return 0;
         }
 
+        public int Delete(string enrollId)
+        {
+            int result = 0;
 
+            if (db != null)
+            {
+
+                var post = db.Student.FirstOrDefault(x => x.EnrollmentNo == enrollId);
+
+                if (post != null)
+                {
+
+                    db.Student.Remove(post);
+                    result = db.SaveChanges();
+                    return 1;
+                }
+                return result;
+            }
+
+            return result;
+
+        }
     }
 }
+
+
+
+    
+

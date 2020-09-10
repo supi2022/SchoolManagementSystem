@@ -1,12 +1,11 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SchoolManagementSystem.Models;
+using SchoolManagementSystem.Repository;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SchoolManagementSystem;
-using SchoolManagementSystem.Models;
+using System;
 
 namespace SchoolManagementSystem.Controllers
 {
@@ -14,112 +13,126 @@ namespace SchoolManagementSystem.Controllers
     [ApiController]
     public class StudentsController : ControllerBase
     {
-        private readonly SchoolManagementSystemDBContext _context;
-        readonly log4net.ILog _log4net;
-        public StudentsController(SchoolManagementSystemDBContext context)
+        public readonly log4net.ILog _log4net;
+
+        IStudentRepository db;
+
+        public StudentsController(IStudentRepository _db)
         {
-            _context = context;
+            db = _db;
             _log4net = log4net.LogManager.GetLogger(typeof(StudentsController));
         }
 
+
+
         // GET: api/Students
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Student>>> GetStudent()
+        public IActionResult Get()
         {
-            return await _context.Student.ToListAsync();
+            _log4net.Info("StudentsController GET ALL Action Method called");
+            try
+            {
+                var obj = db.GetDetails();
+                if (obj == null)
+                    return NotFound();
+                return Ok(obj);
+            }
+            catch (Exception)
+            {
+                return BadRequest();
+            }
         }
 
         // GET: api/Students/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Student>> GetStudent(string id)
+        public IActionResult Get1(string enrollid)
         {
-            var student = await _context.Student.FindAsync(id);
-
-            if (student == null)
-            {
-                return NotFound();
-            }
-
-            return student;
-        }
-
-        // PUT: api/Students/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutStudent(string id, Student student)
-        {
-            if (id != student.EnrollmentNo)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(student).State = EntityState.Modified;
-
+            Student data = new Student();
             try
             {
-                await _context.SaveChangesAsync();
+                data = db.GetDetail(enrollid);
+                if (data == null)
+                {
+                    return BadRequest(data);
+                }
+                return Ok(data);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception)
             {
-                if (!StudentExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return BadRequest(data);
             }
-
-            return NoContent();
         }
 
         // POST: api/Students
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
-        public async Task<ActionResult<Student>> PostStudent(Student student)
+        public IActionResult Post([FromBody] Student obj)
         {
-            _context.Student.Add(student);
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var res = db.AddDetail(obj);
+                    if (res != null)
+                        return Ok(res);
+
+                    return NotFound();
+                }
+                catch (Exception)
+                {
+                    return BadRequest();
+                }
+            }
+            return BadRequest();
+        }
+
+        // PUT: api/Students/5
+        [HttpPut("{id}")]
+        public IActionResult Put(string enrollid, [FromBody] Student std)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var result = db.UpdateDetail(enrollid, std);
+                    if (result != 1)
+                        return NotFound();
+
+                    return Ok(result);
+                }
+                catch (Exception ex)
+                {
+                    if (ex.GetType().FullName ==
+                             "Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException")
+                    {
+                        return NotFound();
+                    }
+
+                    return BadRequest();
+                }
+            }
+
+            return BadRequest();
+        }
+
+        // DELETE: api/ApiWithActions/5
+        [HttpDelete("{id}")]
+        public IActionResult Delete(string enrollid)
+        {
             try
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                if (StudentExists(student.EnrollmentNo))
+                var result = db.Delete(enrollid);
+                if (result == 0)
                 {
-                    return Conflict();
+                    return NotFound(result);
                 }
-                else
-                {
-                    throw;
-                }
+                return Ok(result);
             }
-
-            return CreatedAtAction("GetStudent", new { id = student.EnrollmentNo }, student);
-        }
-
-        // DELETE: api/Students/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<Student>> DeleteStudent(string id)
-        {
-            var student = await _context.Student.FindAsync(id);
-            if (student == null)
+            catch (Exception)
             {
-                return NotFound();
+
+                return BadRequest(enrollid);
             }
-
-            _context.Student.Remove(student);
-            await _context.SaveChangesAsync();
-
-            return student;
         }
 
-        private bool StudentExists(string id)
-        {
-            return _context.Student.Any(e => e.EnrollmentNo == id);
-        }
     }
 }
